@@ -1,5 +1,4 @@
 import streamlit as st
-from groq import Groq
 
 st.set_page_config(
     page_title="AI Fake Customer Simulator",
@@ -7,130 +6,72 @@ st.set_page_config(
 )
 
 st.title("🤖 AI Fake Customer Simulator")
+st.write("Practice handling different customer complaints.")
 
-st.write(
-    "The AI Customer and AI Support Agent will automatically "
-    "have a conversation."
-)
-
-# Customer type
-customer_type = st.selectbox(
-    "Select Customer Type",
-    [
-        "Angry Customer",
-        "Polite Customer",
-        "Confused Customer",
-        "Impatient Customer",
-        "Frustrated Customer"
-    ]
-)
-
-# Number of conversation turns
-turns = st.slider(
-    "Number of Conversation Turns",
-    min_value=4,
-    max_value=20,
-    value=10
-)
-
-# Start conversation
-if st.button("▶️ Start Conversation"):
-
-    st.subheader("💬 AI-to-AI Conversation")
-
-    # Connect to Groq using the API key stored in Streamlit Secrets
-    client = Groq(
-        api_key=st.secrets["GROQ_API_KEY"]
-    )
-
-    # First customer message
-    customer_prompt = (
-        "You are a "
-        + customer_type
-        + " contacting customer support. "
-        "Start a realistic customer-service complaint. "
-        "Keep it natural and conversational. "
-        "Do not say you are an AI. "
-        "Do not use 'Customer:' as a label."
-    )
-
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {
-                "role": "user",
-                "content": customer_prompt
-            }
+customers = {
+    "Angry Customer": {
+        "customer": "My order is very late! I ordered it 5 days ago. This is really frustrating!",
+        "suggestions": [
+            "I sincerely apologize for the delay. Let me check the status of your order.",
+            "I'm sorry for the inconvenience. I understand how frustrating this must be.",
+            "I apologize for the delay. I'll help you track your order and find a solution."
         ]
-    )
+    },
 
-    customer_message = response.choices[0].message.content
+    "Refund Customer": {
+        "customer": "I received a damaged product and I want my money back.",
+        "suggestions": [
+            "I'm sorry that you received a damaged product. I'll help you with the refund process.",
+            "I apologize for the problem. Please share your order details so I can assist with your refund.",
+            "I'm sorry about this experience. We can check the order and arrange a replacement or refund."
+        ]
+    },
 
-    # Conversation loop
-    for i in range(turns):
+    "Wrong Product Customer": {
+        "customer": "I ordered a black shirt, but you sent me a red shirt. What should I do?",
+        "suggestions": [
+            "I'm sorry for the mistake. I'll help you arrange a replacement for the correct product.",
+            "I apologize for sending the wrong item. Please share your order number so we can fix this.",
+            "Sorry about the mix-up. We'll check your order and help you get the correct shirt."
+        ]
+    },
 
-        # Customer
-        st.markdown("### 🤖 AI Customer")
-        st.info(customer_message)
+    "Payment Problem Customer": {
+        "customer": "Money was deducted from my account, but my order was not placed.",
+        "suggestions": [
+            "I'm sorry for the trouble. Let me help you check the payment and order status.",
+            "I understand your concern. Please share the transaction details so we can investigate.",
+            "Don't worry. I'll help you check whether the payment was successful and guide you through the next step."
+        ]
+    }
+}
 
-        # Support Agent
-        support_prompt = (
-            "You are a professional customer-support agent. "
-            "Respond naturally to the customer's message. "
-            "Be polite, helpful and professional. "
-            "Try to solve the customer's problem. "
-            "Ask for information when necessary. "
-            "Do not say you are an AI. "
-            "Do not use 'Support Agent:' as a label.\n\n"
-            "Customer message:\n"
-            + customer_message
-        )
+customer_type = st.selectbox(
+    "Choose a customer:",
+    list(customers.keys())
+)
 
-        response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[
-                {
-                    "role": "user",
-                    "content": support_prompt
-                }
-            ]
-        )
+data = customers[customer_type]
 
-        support_message = response.choices[0].message.content
+st.subheader("👤 Customer")
+st.info(data["customer"])
 
-        st.markdown("### 🤖 AI Support Agent")
-        st.success(support_message)
+st.subheader("🤖 AI Suggested Responses")
 
-        # Customer responds again
-        if i < turns - 1:
+for i, suggestion in enumerate(data["suggestions"], 1):
+    st.write(f"Suggestion {i}: {suggestion}")
 
-            next_customer_prompt = (
-                "You are a "
-                + customer_type
-                + " customer. "
-                "Continue the conversation naturally. "
-                "Respond to the support agent's message. "
-                "You can ask questions, show frustration, "
-                "provide information, accept the solution, "
-                "or thank the support agent. "
-                "Keep the conversation realistic. "
-                "Do not say you are an AI. "
-                "Do not use 'Customer:' as a label.\n\n"
-                "Support Agent message:\n"
-                + support_message
-            )
+st.divider()
 
-            response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": next_customer_prompt
-                    }
-                ]
-            )
+st.subheader("💬 Your Response")
 
-            customer_message = response.choices[0].message.content
+user_response = st.text_area(
+    "Type your response to the customer:"
+)
 
-    st.success("✅ Conversation completed!")
-
+if st.button("Submit Response"):
+    if user_response.strip():
+        st.success("Good response! Keep the customer calm and provide a solution.")
+        st.write("Your response:", user_response)
+    else:
+        st.warning("Please type a response first.")
