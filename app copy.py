@@ -1,7 +1,6 @@
 import streamlit as st
 import ollama
 
-
 st.set_page_config(
     page_title="AI Fake Customer Simulator",
     page_icon="🤖"
