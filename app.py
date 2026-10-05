@@ -1,5 +1,5 @@
 import streamlit as st
-import ollama
+from groq import Groq
 
 st.set_page_config(
     page_title="AI Fake Customer Simulator",
@@ -9,10 +9,11 @@ st.set_page_config(
 st.title("🤖 AI Fake Customer Simulator")
 
 st.write(
-    "Practice customer-support conversations using two AI agents. "
-    "The Customer AI and Support Agent AI will automatically talk to each other."
+    "The AI Customer and AI Support Agent will automatically "
+    "have a conversation."
 )
 
+# Customer type
 customer_type = st.selectbox(
     "Select Customer Type",
     [
@@ -24,6 +25,7 @@ customer_type = st.selectbox(
     ]
 )
 
+# Number of conversation turns
 turns = st.slider(
     "Number of Conversation Turns",
     min_value=4,
@@ -31,34 +33,38 @@ turns = st.slider(
     value=10
 )
 
+# Start conversation
 if st.button("▶️ Start Conversation"):
 
     st.subheader("💬 AI-to-AI Conversation")
 
-    # First message from Customer AI
-    customer_prompt = f"""
-You are a {customer_type} contacting customer support.
+    # Connect to Groq using the API key stored in Streamlit Secrets
+    client = Groq(
+        api_key=st.secrets["GROQ_API_KEY"]
+    )
 
-Start a realistic customer-service conversation.
+    # First customer message
+    customer_prompt = (
+        "You are a "
+        + customer_type
+        + " contacting customer support. "
+        "Start a realistic customer-service complaint. "
+        "Keep it natural and conversational. "
+        "Do not say you are an AI. "
+        "Do not use 'Customer:' as a label."
+    )
 
-Create a customer complaint or problem.
-Keep the message natural and conversational.
-
-Do not say that you are an AI.
-Do not include "Customer:".
-"""
-
-    customer_response = ollama.chat(
-        model="llama3.2",
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
         messages=[
             {
-                "role": "system",
+                "role": "user",
                 "content": customer_prompt
             }
         ]
     )
 
-    customer_message = customer_response["message"]["content"]
+    customer_message = response.choices[0].message.content
 
     # Conversation loop
     for i in range(turns):
@@ -67,4 +73,64 @@ Do not include "Customer:".
         st.markdown("### 🤖 AI Customer")
         st.info(customer_message)
 
-        
+        # Support Agent
+        support_prompt = (
+            "You are a professional customer-support agent. "
+            "Respond naturally to the customer's message. "
+            "Be polite, helpful and professional. "
+            "Try to solve the customer's problem. "
+            "Ask for information when necessary. "
+            "Do not say you are an AI. "
+            "Do not use 'Support Agent:' as a label.\n\n"
+            "Customer message:\n"
+            + customer_message
+        )
+
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {
+                    "role": "user",
+                    "content": support_prompt
+                }
+            ]
+        )
+
+        support_message = response.choices[0].message.content
+
+        st.markdown("### 🤖 AI Support Agent")
+        st.success(support_message)
+
+        # Customer responds again
+        if i < turns - 1:
+
+            next_customer_prompt = (
+                "You are a "
+                + customer_type
+                + " customer. "
+                "Continue the conversation naturally. "
+                "Respond to the support agent's message. "
+                "You can ask questions, show frustration, "
+                "provide information, accept the solution, "
+                "or thank the support agent. "
+                "Keep the conversation realistic. "
+                "Do not say you are an AI. "
+                "Do not use 'Customer:' as a label.\n\n"
+                "Support Agent message:\n"
+                + support_message
+            )
+
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": next_customer_prompt
+                    }
+                ]
+            )
+
+            customer_message = response.choices[0].message.content
+
+    st.success("✅ Conversation completed!")
+
